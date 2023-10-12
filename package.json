@@ -4,6 +4,8 @@
     "dependencies": {
         "@pulumi/aws": "^6.5.0",
         "@pulumi/awsx": "^1.0.0",
-        "@pulumi/pulumi": "^3.88.0"
+        "@pulumi/pulumi": "^3.88.0",
+        "ip": "^1.1.8",
+        "subnet-cidr-calculator": "^1.0.12"
     }
 }

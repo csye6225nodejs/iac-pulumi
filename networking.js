@@ -2,7 +2,7 @@ const aws = require("@pulumi/aws");
 const pulumi = require("@pulumi/pulumi");
 
 const { createVPC, createSubnets } = require("./vpc");
-const  destinationCidr = new pulumi.Config().require("destinationCidr");
+const  destinationCidr = new pulumi.Config("iac-pulumi").require("destinationCidr");
 
 
 function createInternetGateway(vpc) {
