@@ -3,6 +3,4 @@ config:
   aws:region: us-east-2
   iac-pulumi:destinationCidr: 0.0.0.0/0
   iac-pulumi:subnetCidr: "10.0.0.0/16"
-  iac-pulumi:privateSubnetCidrs: ["10.0.3.0/24", "10.0.4.0/24", "10.0.5.0/24"]
-  iac-pulumi:publicSubnetCidrs: ["10.0.0.0/24", "10.0.1.0/24", "10.0.2.0/24"]
   iac-pulumi:vpcCidrBlock: 10.0.0.0/16
