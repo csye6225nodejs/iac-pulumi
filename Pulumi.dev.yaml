@@ -6,3 +6,6 @@ config:
   iac-pulumi:vpcCidrBlock: 10.0.0.0/16
   iac-pulumi:ami_id: ami-05ac945cb61cc7b71
   iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/cloudkey/keypairgen.pub"
+  iac-pulumi:ports: [22, 80, 443, 8080]
+  iac-pulumi:volumeSize: 25
+  iac-pulumi:volumeType: "gp2"
