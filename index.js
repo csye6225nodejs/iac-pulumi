@@ -6,12 +6,13 @@ const ami_id = new pulumi.Config("iac-pulumi").require("ami_id");
 const { createVPC, createSubnets } = require("./vpc");
 const { createInternetGateway, createPublicRouteTable, createPrivateRouteTable } = require("./networking");
 const  subnetcidr = new pulumi.Config("iac-pulumi").require("subnetCidr");
+const pubkey = new pulumi.Config("iac-pulumi").require("pubkey");
 
 async function main() {
     const vpc = createVPC();
     const { publicSubnets, privateSubnets } = await createSubnets(vpc);
     
-    const publicKey = fs.readFileSync('keypairgen.pub', 'utf-8');
+    const publicKey = fs.readFileSync(pubkey, 'utf-8');
     const keyPair = new aws.ec2.KeyPair("myKeyPair", { publicKey });
 
     const internetGateway = createInternetGateway(vpc);
