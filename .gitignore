@@ -1,2 +1,4 @@
 /node_modules/
 pulumi.demo.yaml
+keypairgen.pem
+keypairgen.pub
