@@ -4,9 +4,11 @@ const fs = require("fs");
 const SubnetCIDRAdviser = require("subnet-cidr-calculator");
 const ami_id = new pulumi.Config("iac-pulumi").require("ami_id");
 const { createVPC, createSubnets } = require("./vpc");
+const { createRdsInstance } = require('./rds');
 const { createInternetGateway, createPublicRouteTable, createPrivateRouteTable } = require("./networking");
 const  subnetcidr = new pulumi.Config("iac-pulumi").require("subnetCidr");
 const  destinationCidr = new pulumi.Config("iac-pulumi").require("destinationCidr");
+
 const ports = new pulumi.Config("iac-pulumi").require("ports");
 const pubkey = new pulumi.Config("iac-pulumi").require("pubkey");
 const volumeSize = new pulumi.Config("iac-pulumi").require("volumeSize");
@@ -61,27 +63,56 @@ async function main() {
         };
     });
 
-ingressRules.forEach((rule, index) => {
-    const ruleName = `ingress-rule-${index}`;
-    new aws.ec2.SecurityGroupRule(ruleName, {
-        type: "ingress",
-        fromPort: rule.fromPort,
-        toPort: rule.toPort,
-        protocol: rule.protocol,
-        securityGroupId: applicationSecurityGroup.id,
-        cidrBlocks: rule.cidrBlocks,
+    ingressRules.forEach((rule, index) => {
+        const ruleName = `ingress-rule-${index}`;
+        new aws.ec2.SecurityGroupRule(ruleName, {
+            type: "ingress",
+            fromPort: rule.fromPort,
+            toPort: rule.toPort,
+            protocol: rule.protocol,
+            securityGroupId: applicationSecurityGroup.id,
+            cidrBlocks: rule.cidrBlocks,
+        });
     });
-});
 
 
     //subnet 
     const [ipAddress, subnetMask] = subnetcidr.split('/');
     const probabal_subnets = SubnetCIDRAdviser.calculate(ipAddress, 16);
 
-    console.log(probabal_subnets);
+    const dbSecurityGroup = await createRDSSecurityGroup(applicationSecurityGroup, vpc);
+    const rdsAddress = await createRdsInstance(vpc,privateSubnets );
     const publicRouteTable = createPublicRouteTable(vpc, publicSubnets, internetGateway);
     const privateRouteTable = createPrivateRouteTable(vpc, privateSubnets);
 }
+
+
+async function createRDSSecurityGroup(applicationSecurityGroup, vpc) {
+
+    // Your RDS security group creation code goes here
+    const dbSecurityGroup = new aws.ec2.SecurityGroup("database-security-group", {
+        name: "database-security-group",
+        description: "Security group for RDS instances",
+        vpcId: vpc.id
+    });
+
+    // Add ingress rules for RDS access
+
+
+    // Example rule for MySQL on port 3306
+    new aws.ec2.SecurityGroupRule("db-ingress-rule-mysql", {
+        type: "ingress",
+        fromPort: 3306, // Change to the desired database port
+        toPort: 3306,
+        protocol: "tcp",
+        securityGroupId: dbSecurityGroup.id,
+        sourceSecurityGroupId: applicationSecurityGroup.id,
+    });
+
+    // Return the created security group if needed
+    return dbSecurityGroup;
+}
+
 
 main();
 
