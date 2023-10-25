@@ -10,3 +10,18 @@ config:
   iac-pulumi:volumeSize: 25
   iac-pulumi:volumeType: "gp2"
   iac-pulumi:mysqlfamily: "mysql8.0"
+  iac-pulumi:allocatedStorage: 20
+  iac-pulumi:storageType: "gp3"
+  iac-pulumi:instanceClass: "db.t2.micro"
+  iac-pulumi:db_name: "csye6225"
+  iac-pulumi:username: "csye6225"
+  iac-pulumi:password: "Abhi3534"
+  iac-pulumi:skipFinalSnapshot: true
+  iac-pulumi:instanceType: "t2.micro"
+  iac-pulumi:sqlport: 3306
+  iac-pulumi:protocol: "tcp"  
+  iac-pulumi:engine: "mysql"
+  iac-pulumi:parameter_name: "max_connections"
+  iac-pulumi:max_conn: 100
+  iac-pulumi:fromPort: 0
+  iac-pulumi:toPort: 65535
