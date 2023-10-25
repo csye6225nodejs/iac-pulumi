@@ -10,13 +10,14 @@ const { Endpoint } = require("@pulumi/aws/dms");
 const { RdsDbInstance } = require("@pulumi/aws/opsworks");
 const  subnetcidr = new pulumi.Config("iac-pulumi").require("subnetCidr");
 const  destinationCidr = new pulumi.Config("iac-pulumi").require("destinationCidr");
-
+const  mysqlfamily = new pulumi.Config("iac-pulumi").require("mysqlfamily");
 const ports = new pulumi.Config("iac-pulumi").require("ports");
 const pubkey = new pulumi.Config("iac-pulumi").require("pubkey");
 const volumeSize = new pulumi.Config("iac-pulumi").require("volumeSize");
 const volumeType = new pulumi.Config("iac-pulumi").require("volumeType");
 
 async function main() {
+
     const vpc = createVPC();
     const { publicSubnets, privateSubnets } = await createSubnets(vpc);
     
@@ -65,50 +66,88 @@ async function main() {
     const [ipAddress, subnetMask] = subnetcidr.split('/');
     const probabal_subnets = SubnetCIDRAdviser.calculate(ipAddress, 16);
 
-    const dbSecurityGroup = await createRDSSecurityGroup(applicationSecurityGroup, vpc);
-    const rdsInstance = await createRdsInstance(dbSecurityGroup,privateSubnets );
 
-    pulumi.all({
-        dbId: rdsInstance.dbInstanceIdentifier,
-        dbAddress: rdsInstance.address,
-        dbPort:    rdsInstance.port,
-    }).apply(async(outputs) => {
-        // Define EC2 userData script
-        const userDataScript = `#!/bin/bash
-            echo "export DB_NAME=${outputs.dbId}" >> /opt/webapp/.env
-            echo "export DB_PORT=${outputs.dbPort}" >> /opt/webapp/.env
-            echo "export DB_HOST=${outputs.dbAddress}" >> /opt/webapp/.env
-            source /etc/environment
-            # Start your Nodejs application here
-        `;
+    const dbSecurityGroup = await createRDSSecurityGroup(applicationSecurityGroup, vpc);
+ 
+
+    // Create an RDS Parameter Group
+    const dbparametergroup = new aws.rds.ParameterGroup("dbparametergroup", {
+        family: mysqlfamily, // Use the appropriate parameter group family
+        description: "Custom DB parameter group",
+        parameters: [
+        {
+            name: "max_connections",
+            value: "100",
+        },
+        ],
+    });
+
+    const dbsubnetgroup = new aws.rds.SubnetGroup("dbsubnetgroup", {
+        subnetIds: privateSubnets,
+    });
+
+    // Create the RDS Instance
+    const rdsinstance = new aws.rds.Instance("rdsinstance", {
+        
+        allocatedStorage: 20,
+        storageType: "gp3",
+        engine: "mysql", // Change to "mariadb" or "postgres" as needed
+        instanceClass: "db.t2.micro", // Choose the instance class you want
+        dbName: "csye6225",
+        username: "csye6225",
+        password: "Abhi3534",
+        skipFinalSnapshot: true,
+        dbSubnetGroupName: dbsubnetgroup,
+        vpcSecurityGroupIds: [dbSecurityGroup.id],
+        parameterGroupName: dbparametergroup.name,
+    },{dependsOn: dbsubnetgroup});
     
+       // #region User Data Script
+       const userDataScript = pulumi.all([rdsinstance.dbName, rdsinstance.username, rdsinstance.password,rdsinstance.address]).apply(([dbname, dbusername, dbpassword, dbhost]) => {
+        return `#!/bin/bash
+        echo "DB_NAME=${dbname}" >> /opt/webapp/.env
+        echo "DB_USER=${dbusername}" >> /opt/webapp/.env
+        echo "DB_PASSWORD=${dbpassword}" >> /opt/webapp/.env
+        echo "DB_HOST=${dbhost}" >> /opt/webapp/.env
+        echo "DB_PORT=3306" >> /opt/webapp/.env
+        sudo systemctl enable webapp.service
+        sudo systemctl start webapp.service
+        `;
+    });
+    // #endregion
+
+    new aws.ec2.SecurityGroupRule("ec2-outbound-rule-rds", {
+        type: "egress",
+        fromPort: 0,       // Allow outgoing connections from any port
+        toPort: 65535,     // To any port
+        protocol: "tcp",
+        securityGroupId: applicationSecurityGroup.id,
+        cidrBlocks: [destinationCidr] // Allow outgoing connections to the RDS endpoint
+    },{dependsOn: [rdsinstance, applicationSecurityGroup] });
+    
+
         // Create EC2 instance
-        const ec2Instance = new aws.ec2.Instance("my-ec2-instance", {
+    const ec2Instance = new aws.ec2.Instance("my-ec2-instance", {
             ami: ami_id, // Replace with your custom AMI ID
             instanceType: "t2.micro",   
             subnetId: publicSubnets[0],
             vpcSecurityGroupIds: [applicationSecurityGroup.id], // Attach the security group
             keyName: keyPair.keyName,
-            userData: userDataScript,
             disableApiTermination: false, // No protection against accidental termination
             rootBlockDevice: {
                 volumeSize: volumeSize, // Root volume size of 25 GB
                 volumeType: volumeType, // General Purpose SSD (GP2)
             },
+            userData: pulumi.interpolate`${userDataScript}`,
             tags: {
                 Name: "Abhishek-EC2Instance", // Replace with a suitable name
             },
-        }); 
-    
-    });
-    
- 
-        //create ec2 instance
-    
+    }, {dependsOn: [rdsinstance,dbSecurityGroup]});
 
     const publicRouteTable = createPublicRouteTable(vpc, publicSubnets, internetGateway);
     const privateRouteTable = createPrivateRouteTable(vpc, privateSubnets);
 }
+
 
 
 async function createRDSSecurityGroup(applicationSecurityGroup, vpc) {
@@ -128,7 +167,8 @@ async function createRDSSecurityGroup(applicationSecurityGroup, vpc) {
         protocol: "tcp",
         securityGroupId: dbSecurityGroup.id,
         sourceSecurityGroupId: applicationSecurityGroup.id,
-    });
+    }, {dependsOn: [dbSecurityGroup, applicationSecurityGroup]});
+
 
     // Return the created security group if needed
     return dbSecurityGroup;

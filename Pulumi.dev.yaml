@@ -4,8 +4,9 @@ config:
   iac-pulumi:destinationCidr: 0.0.0.0/0
   iac-pulumi:subnetCidr: "10.0.0.0/16"
   iac-pulumi:vpcCidrBlock: 10.0.0.0/16
-  iac-pulumi:ami_id: ami-08eece8be685dd37a
+  iac-pulumi:ami_id: ami-00b2d3176543bd0db
   iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/cloudkey/keypairgen.pub"
   iac-pulumi:ports: [22, 80, 443, 8080]
   iac-pulumi:volumeSize: 25
   iac-pulumi:volumeType: "gp2"
+  iac-pulumi:mysqlfamily: "mysql8.0"
