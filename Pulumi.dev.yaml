@@ -4,11 +4,11 @@ config:
   iac-pulumi:destinationCidr: 0.0.0.0/0
   iac-pulumi:subnetCidr: "10.0.0.0/16"
   iac-pulumi:vpcCidrBlock: 10.0.0.0/16
-  iac-pulumi:ami_id: ami-03393656833f1be68
+  iac-pulumi:ami_id: ami-0f1175b0b0835b663
   iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/cloudkey/keypairgen.pub"
   iac-pulumi:ports: [22, 80, 443, 8080]
   iac-pulumi:volumeSize: 25
-  iac-pulumi:volumeType: "gp2"
+  iac-pulumi:volumeType: "gp2"  
   iac-pulumi:mysqlfamily: "mysql8.0"
   iac-pulumi:allocatedStorage: 20
   iac-pulumi:storageType: "gp3"
@@ -25,3 +25,6 @@ config:
   iac-pulumi:max_conn: 100
   iac-pulumi:fromPort: 0
   iac-pulumi:toPort: 65535
+  iac-pulumi:ZoneId: "Z031431132X536RK4X5WN"
+  iac-pulumi:domainname: "dev.abhishekvenkata.me"
+  iac-pulumi:publicIp:
