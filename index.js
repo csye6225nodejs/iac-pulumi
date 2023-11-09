@@ -29,7 +29,8 @@ const fromPort = new pulumi.Config("iac-pulumi").require("fromPort");
 const toPort = new pulumi.Config("iac-pulumi").require("toPort");
 const hostedZone = new pulumi.Config("iac-pulumi").require("ZoneId");
 const domainname = new pulumi.Config("iac-pulumi").require("domainname");
-const publicIp = new pulumi.Config("iac-pulumi").require("publicIp");
+const loggroupname = new pulumi.Config("iac-pulumi").require("loggroupname");
+const logstreamname = new pulumi.Config("iac-pulumi").require("logstreamname");
 
 async function main() {
 
@@ -178,11 +179,11 @@ async function main() {
     },{dependsOn: [role]});
 
     const logGroup = new aws.cloudwatch.LogGroup("csye6225LogGroup", {
-        name: "csye6225",
+        name: loggroupname,
     });
 
     const logStream = new aws.cloudwatch.LogStream("WebappLogStream", {
-        name: "webapp",
+        name: logstreamname,
         logGroupName: logGroup.name,
     }, { dependsOn: logGroup });
 

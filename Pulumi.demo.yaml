@@ -27,4 +27,5 @@ config:
   iac-pulumi:toPort: 65535
   iac-pulumi:ZoneId: "Z0314825149TSSNHBW9J7"
   iac-pulumi:domainname: "demo.abhishekvenkata.me"
-  iac-pulumi:publicIp:
+  iac-pulumi:loggroupname: "csye6225"
+  iac-pulumi:logstreamname: "webapp"
