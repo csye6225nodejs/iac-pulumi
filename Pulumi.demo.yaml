@@ -1,11 +1,11 @@
 config:
-  aws:profile: dev
+  aws:profile: demo
   aws:region: us-east-2
   iac-pulumi:destinationCidr: 0.0.0.0/0
   iac-pulumi:subnetCidr: "10.0.0.0/16"
   iac-pulumi:vpcCidrBlock: 10.0.0.0/16
   iac-pulumi:ami_id: ami-01ef5660631392901
-  iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/cloudkey/keypairgen.pub"
+  iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/democloudkey/democloudkey.pub"
   iac-pulumi:ports: [22, 80, 443, 8080]
   iac-pulumi:volumeSize: 25
   iac-pulumi:volumeType: "gp2"  
@@ -25,6 +25,6 @@ config:
   iac-pulumi:max_conn: 100
   iac-pulumi:fromPort: 0
   iac-pulumi:toPort: 65535
-  iac-pulumi:ZoneId: "Z031431132X536RK4X5WN"
-  iac-pulumi:domainname: "dev.abhishekvenkata.me"
+  iac-pulumi:ZoneId: "Z0314825149TSSNHBW9J7"
+  iac-pulumi:domainname: "demo.abhishekvenkata.me"
   iac-pulumi:publicIp:
