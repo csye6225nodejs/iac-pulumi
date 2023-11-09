@@ -177,7 +177,15 @@ async function main() {
         role: role.name
     },{dependsOn: [role]});
 
-    const logGroup = new aws.cloudwatch.LogGroup("csye6225",{dependsOn:[role]});
+    const logGroup = new aws.cloudwatch.LogGroup("csye6225LogGroup", {
+        name: "csye6225",
+    });
+
+    const logStream = new aws.cloudwatch.LogStream("WebappLogStream", {
+        name: "webapp",
+        logGroupName: logGroup.name,
+    }, { dependsOn: logGroup });
+
         // Create EC2 instance
     const ec2Instance = new aws.ec2.Instance("my-ec2-instance", {
             ami: ami_id, // Replace with your custom AMI ID
