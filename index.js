@@ -206,7 +206,7 @@ async function main() {
         // Your domain name goes here
         name: domainname,
         type: "A",
-        zoneId: hostedZone,
+        zoneId: hostedZone, 
         records: [ec2Instance.publicIp],
         ttl: 60,
     },{dependsOn: [ec2Instance]});
