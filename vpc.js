@@ -23,7 +23,7 @@ function createVPC() {
 async function createSubnets(vpc) {
     
     const zones = await aws.getAvailabilityZones({ state: "available" });
-    const availabilityZones = zones.names.slice(0, 3);
+    let availabilityZones = zones.names.slice(0, 3);
 
     const publicSubnets = [];
     const privateSubnets = [];
@@ -32,6 +32,7 @@ async function createSubnets(vpc) {
     const probabal_subnets = SubnetCIDRAdviser.calculate(ipAddress, subnetMask);
 
     console.log(availabilityZones);
+    //availabilityZones = [ 'us-east-1a', 'us-east-2a', 'us-west-1a' ];
     availabilityZones.forEach((az, index) => {
 
         
