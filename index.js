@@ -9,6 +9,7 @@ const subnetcidr = new pulumi.Config("iac-pulumi").require("subnetCidr");
 const destinationCidr = new pulumi.Config("iac-pulumi").require("destinationCidr");
 const mysqlfamily = new pulumi.Config("iac-pulumi").require("mysqlfamily");
 const ports = new pulumi.Config("iac-pulumi").require("ports");
+const loadingports = new pulumi.Config("iac-pulumi").require("loadingports");
 const pubkey = new pulumi.Config("iac-pulumi").require("pubkey");
 const volumeSize = new pulumi.Config("iac-pulumi").require("volumeSize");
 const volumeType = new pulumi.Config("iac-pulumi").require("volumeType");
@@ -36,7 +37,6 @@ async function main() {
 
     const vpc = createVPC();
     const { publicSubnets, privateSubnets } = await createSubnets(vpc);
-    
     const publicKey = fs.readFileSync(pubkey, 'utf-8');
     const keyPair = new aws.ec2.KeyPair("myKeyPair", { publicKey });
 
@@ -54,7 +54,16 @@ async function main() {
         vpcId: vpc.id, // Replace with your VPC ID
     });
 
+    //create load balancer security group
+    const loadBalancerSecurityGroup = new aws.ec2.SecurityGroup("load-balancer-security-group", {
+        name: "load-balancer-security-group",
+        description: "Security group for load balancer in the application",
+        vpcId: vpc.id, // Replace with your VPC ID
+    });
+
     const ingressPorts = JSON.parse(ports);
+
+    const loadPorts = JSON.parse(loadingports);
 
     const ingressRules = ingressPorts.map((port) => {
         return {
@@ -65,7 +74,16 @@ async function main() {
         };
     });
 
-    ingressRules.forEach((rule, index) => {
+    const loadIngressRules = loadPorts.map((port) => {
+        return {
+            protocol: protocol,
+            fromPort: port,
+            toPort: port,
+            cidrBlocks: [destinationCidr], // Allows access from anywhere
+        };
+    });
+
+   /* ingressRules.forEach((rule, index) => {
         const ruleName = `ingress-rule-${index}`;
         new aws.ec2.SecurityGroupRule(ruleName, {
             type: "ingress",
@@ -73,9 +91,69 @@ async function main() {
             toPort: rule.toPort,
             protocol: rule.protocol,
             securityGroupId: applicationSecurityGroup.id,
+            securityGroups: [loadBalancerSecurityGroup.id],
             cidrBlocks: rule.cidrBlocks,
         });
-    });
+    },{dependsOn:[loadBalancerSecurityGroup]});
+
+    loadIngressRules.forEach((rule, index) => {
+        const ruleName = `load-ingress-rule-${index}`;
+        
+    });*/
+
+    const LoadIngressRule0 = new aws.ec2.SecurityGroupRule('load-ingress-rule-0', {
+        type: "ingress",
+        fromPort: 80,
+        toPort: 80,
+        protocol: "tcp",
+        cidrBlocks: [destinationCidr],
+        securityGroupId: loadBalancerSecurityGroup.id
+    },{dependsOn:[loadBalancerSecurityGroup]});
+
+    const LoadIngressRule1 = new aws.ec2.SecurityGroupRule('load-ingress-rule-1', {
+        type: "ingress",
+        fromPort: 443,
+        toPort: 443,
+        protocol: "tcp",
+        securityGroupId: loadBalancerSecurityGroup.id,
+        cidrBlocks: [destinationCidr],
+    },{dependsOn: [loadBalancerSecurityGroup]});
+
+    const IngressRule0 = new aws.ec2.SecurityGroupRule('ingress-rule-0', {
+        type: "ingress",
+        fromPort: 22,
+        toPort: 22,
+        protocol: "tcp",
+        cidrBlocks: [destinationCidr],
+        securityGroupId: applicationSecurityGroup.id,
+    },{dependsOn:[applicationSecurityGroup]});
+
+    const IngressRule1 = new aws.ec2.SecurityGroupRule('ingress-rule-1', {
+        type: "ingress",
+        fromPort: 8080,
+        toPort: 8080,
+        protocol: "tcp",
+        sourceSecurityGroupId: loadBalancerSecurityGroup.id,
+        securityGroupId: applicationSecurityGroup.id,
+    },{dependsOn: [applicationSecurityGroup, loadBalancerSecurityGroup]});
+
+    new aws.ec2.SecurityGroupRule("ec2-outbound-rule-rds", {
+        type: "egress",
+        fromPort: 0,       // Allow outgoing connections from any port
+        toPort: 0,     // To any port
+        protocol: "-1",
+        securityGroupId: applicationSecurityGroup.id,
+        cidrBlocks: [destinationCidr] // Allow outgoing connections to the RDS endpoint
+    },{dependsOn: [ applicationSecurityGroup] });
+
+    new aws.ec2.SecurityGroupRule("ec2-outbound-rule-loadbalancer", {
+        type: "egress",
+        fromPort: 0,       // Allow outgoing connections from any port
+        toPort: 0,     // To any port
+        protocol: "-1",
+        securityGroupId: loadBalancerSecurityGroup.id,
+        cidrBlocks: [destinationCidr] // Allow outgoing connections to the RDS endpoint
+    },{dependsOn: [ loadBalancerSecurityGroup] });
 
 
     //subnet 
@@ -141,16 +219,7 @@ async function main() {
     });
     // #endregion
 
-    new aws.ec2.SecurityGroupRule("ec2-outbound-rule-rds", {
-        type: "egress",
-        fromPort: fromPort,       // Allow outgoing connections from any port
-        toPort: toPort,     // To any port
-        protocol: protocol,
-        securityGroupId: applicationSecurityGroup.id,
-        cidrBlocks: [destinationCidr] // Allow outgoing connections to the RDS endpoint
-    },{dependsOn: [rdsinstance, applicationSecurityGroup] });
-    
-
+    const encodedUserData = userDataScript.apply(script => Buffer.from(script).toString('base64'));
     // Creating a new IAM Role
     const role = new aws.iam.Role("role", {
         assumeRolePolicy: JSON.stringify({
@@ -187,8 +256,151 @@ async function main() {
         logGroupName: logGroup.name,
     }, { dependsOn: logGroup });
 
-        // Create EC2 instance
-    const ec2Instance = new aws.ec2.Instance("my-ec2-instance", {
+
+    const loadBalancer = new aws.lb.LoadBalancer("loadBalancer", {
+        securityGroups: [loadBalancerSecurityGroup.id],
+        subnets: publicSubnets,
+        enableDeletionProtection: false, // Set to true if needed
+    },{dependsOn:[loadBalancerSecurityGroup,publicSubnets]});
+    
+
+    //create http target group to application port
+    const httpTargetGroup = new aws.lb.TargetGroup("httpTargetGroup", {
+        port: 8080,
+        protocol:'HTTP',
+        targetType: "instance",
+        vpcId: vpc.id,
+        healthCheck: {
+            enabled: true,        // Checkbox to control the health check
+            unhealthyThreshold: 2, // The number of consecutive checks failures
+            healthyThreshold: 3,   // The number of consecutive passes for it to be declared as healthy
+            interval: 30,          // Duration in seconds in between individual health checks
+            timeout: 5,            // The duration after which the check times out, in seconds
+            path: "/healthz", 
+            port: 8080,             // The destination for the health check request
+            protocol:'HTTP',        // Set the same protocol as the target group
+        },
+    })
+    
+
+    // Setting up the listener for the HTTP target group.
+    const httpListener = new aws.lb.Listener("httpListener", {
+        loadBalancerArn: loadBalancer.arn,
+        port: 80,
+        defaultActions: [{
+            type: "forward",
+            targetGroupArn: httpTargetGroup.arn
+        }],
+    });
+
+
+    //user data script base64 conversion
+    //const userData = Buffer.from(userDataScript).toString('base64');
+
+    const launch_template = new aws.ec2.LaunchTemplate("launch_template", {
+        imageId: ami_id, 
+        instanceType: instanceType,  
+        iamInstanceProfile: {
+            arn: instanceProfile.arn
+        },
+        keyName: keyPair.keyName,
+        networkInterfaces: [{
+            associatePublicIpAddress: true,
+            securityGroups: [applicationSecurityGroup.id]
+        }],
+        blockDeviceMappings: [{
+            deviceName: "/dev/xvda",
+            ebs: {
+                volumeSize: volumeSize,
+                volumeType: volumeType,
+                deleteOnTermination: true,
+            },
+        }],
+        tagSpecifications: [{
+            resourceType: "instance",
+            tags: {
+                Name: "Launch-Template"
+            }
+        }],
+        userData: encodedUserData,
+    }, {dependsOn: [rdsinstance, applicationSecurityGroup, instanceProfile]});
+
+    // Define an auto-scaling group which constrains its instances with the launch configuration
+    const autoScalingGroup = new aws.autoscaling.Group("web-autoscaling-group", {
+        desiredCapacity: 1,
+        maxSize: 3,
+        minSize: 1,
+        launchTemplate: {
+            id: launch_template.id,
+            version: launch_template.latestVersion
+        },
+        targetGroupArns: [httpTargetGroup.arn],
+        loadBalancer: [loadBalancer.arn],
+        vpcZoneIdentifiers: publicSubnets,
+        tags: [{
+            key: "Name",
+            value: "asg_launch_config",
+            propagateAtLaunch: true,
+        }],
+    }, { dependsOn: [httpTargetGroup,applicationSecurityGroup, rdsinstance, launch_template, loadBalancer] });
+    
+
+
+    const asgStepPolicyUp = new aws.autoscaling.Policy("asgStepPolicyUp", {
+        scalingAdjustment: 1,
+        adjustmentType: "ChangeInCapacity",
+        cooldown: 300,
+        // estimatedInstanceWarmup: 300,
+        autoscalingGroupName: autoScalingGroup.name,
+        // metricAggregationType: "sum",
+        policyType: "SimpleScaling",
+    })
+    
+    const asgStepPolicyDown = new aws.autoscaling.Policy("asgStepPolicyDown", {
+        scalingAdjustment: -1,
+        adjustmentType: "ChangeInCapacity",
+        cooldown: 300,
+        // estimatedInstanceWarmup: 300,
+        autoscalingGroupName: autoScalingGroup.name,
+        // metricAggregationType: "Sum",
+        policyType: "SimpleScaling",
+    })
+
+    // #region CloudWatch Alarms
+    const scaleUpAlarm = new aws.cloudwatch.MetricAlarm("scale-up-alarm", {
+
+        alarmName: "ScaleUpAlarm",
+        comparisonOperator: "GreaterThanThreshold",
+        evaluationPeriods: 1,
+        threshold: 5,
+        metricName: "CPUUtilization",
+        namespace: "AWS/EC2",
+        period: 60,
+        statistic: "Average",
+        dimensions: {
+            AutoScalingGroupName: autoScalingGroup.name,
+        },
+        alarmActions: [asgStepPolicyUp.arn],
+    },{dependsOn:[autoScalingGroup,asgStepPolicyUp]});
+    
+    const scaleDownAlarm = new aws.cloudwatch.MetricAlarm("scale-down-alarm", {
+        alarmName: "ScaleDownAlarm",
+        comparisonOperator: "LessThanThreshold",
+        evaluationPeriods: 1,
+        threshold: 5,
+        metricName: "CPUUtilization",
+        namespace: "AWS/EC2",
+        period: 60,
+        statistic: "Average",
+        dimensions: {
+            AutoScalingGroupName: autoScalingGroup.name,
+        },
+        alarmActions: [asgStepPolicyDown.arn],
+    },{dependsOn:[autoScalingGroup,asgStepPolicyDown]});
+    
+    
+    //create ec2 instance
+   /* const ec2Instance = new aws.ec2.Instance("my-ec2-instance", {
             ami: ami_id, // Replace with your custom AMI ID
             instanceType: instanceType,   
             subnetId: publicSubnets[0],
@@ -205,20 +417,26 @@ async function main() {
             tags: {
                 Name: "Abhishek-EC2Instance", // Replace with a suitable name
             },
-    }, {dependsOn: [rdsinstance,dbSecurityGroup, role, instanceProfile, cloudWatchFullAccess ]});
+    }, {dependsOn: [rdsinstance,dbSecurityGroup, role, instanceProfile, cloudWatchFullAccess ]});*/
 
     // Get an existing Hosted Zone using its Zone ID
-    let myZone = aws.route53.getZone({ zoneId: hostedZone });   
+    const myZone = aws.route53.getZone({ zoneId: hostedZone });   
 
     // Create or update an A record to point to the public IP addres of the EC2 instance
-    let myRecord = new aws.route53.Record("myRecord", {
-        // Your domain name goes here
+    const myRecord = new aws.route53.Record("myRecord", {
         name: domainname,
         type: "A",
-        zoneId: hostedZone, 
-        records: [ec2Instance.publicIp],
-        ttl: 60,
-    },{dependsOn: [ec2Instance]});
+        zoneId: hostedZone,
+        aliases: [
+            {
+                name: loadBalancer.dnsName,
+                zoneId: loadBalancer.zoneId,
+                evaluateTargetHealth: true,
+            },
+        ],
+    }, { 
+        dependsOn: [loadBalancer, autoScalingGroup] 
+    });
 
     const publicRouteTable = createPublicRouteTable(vpc, publicSubnets, internetGateway);
     const privateRouteTable = createPrivateRouteTable(vpc, privateSubnets);

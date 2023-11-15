@@ -6,7 +6,8 @@ config:
   iac-pulumi:vpcCidrBlock: 10.0.0.0/16
   iac-pulumi:ami_id: ami-01ef5660631392901
   iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/democloudkey/democloudkey.pub"
-  iac-pulumi:ports: [22, 80, 443, 8080]
+  iac-pulumi:ports: [22, 8080]
+  iac-pulumi:loadingports: [80, 443]
   iac-pulumi:volumeSize: 25
   iac-pulumi:volumeType: "gp2"  
   iac-pulumi:mysqlfamily: "mysql8.0"
