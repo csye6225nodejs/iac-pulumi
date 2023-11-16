@@ -5,6 +5,7 @@ const SubnetCIDRAdviser = require("subnet-cidr-calculator");
 const ami_id = new pulumi.Config("iac-pulumi").require("ami_id");
 const { createVPC, createSubnets } = require("./vpc");
 const { createInternetGateway, createPublicRouteTable, createPrivateRouteTable } = require("./networking");
+const { prototype } = require("events");
 const subnetcidr = new pulumi.Config("iac-pulumi").require("subnetCidr");
 const destinationCidr = new pulumi.Config("iac-pulumi").require("destinationCidr");
 const mysqlfamily = new pulumi.Config("iac-pulumi").require("mysqlfamily");
@@ -32,6 +33,21 @@ const hostedZone = new pulumi.Config("iac-pulumi").require("ZoneId");
 const domainname = new pulumi.Config("iac-pulumi").require("domainname");
 const loggroupname = new pulumi.Config("iac-pulumi").require("loggroupname");
 const logstreamname = new pulumi.Config("iac-pulumi").require("logstreamname");
+
+
+const httpPort = new pulumi.Config("iac-pulumi").require("httpPort");
+const httpsPort = new pulumi.Config("iac-pulumi").require("httpsPort");
+const sshPort = new pulumi.Config("iac-pulumi").require("sshPort");
+const applnPort = new pulumi.Config("iac-pulumi").require("applnPort");
+const allport = new pulumi.Config("iac-pulumi").require("allport");
+const allprotocol = new pulumi.Config("iac-pulumi").require("allprotocol");
+const api_testing = new pulumi.Config("iac-pulumi").require("api_testing");
+const device_path = new pulumi.Config("iac-pulumi").require("device_path");
+const http_protocol = new pulumi.Config("iac-pulumi").require("http_protocol");
+const statistic = new pulumi.Config("iac-pulumi").require("statistic");
+const threshold = new pulumi.Config("iac-pulumi").require("threshold");
+const policyType_val = new pulumi.Config("iac-pulumi").require("policyType_val");
+const cooldown_time = new pulumi.Config("iac-pulumi").require("cooldown_time");
 
 async function main() {
 
@@ -103,54 +119,54 @@ async function main() {
 
     const LoadIngressRule0 = new aws.ec2.SecurityGroupRule('load-ingress-rule-0', {
         type: "ingress",
-        fromPort: 80,
-        toPort: 80,
-        protocol: "tcp",
+        fromPort: httpPort,
+        toPort: httpPort,
+        protocol: protocol,
         cidrBlocks: [destinationCidr],
         securityGroupId: loadBalancerSecurityGroup.id
     },{dependsOn:[loadBalancerSecurityGroup]});
 
     const LoadIngressRule1 = new aws.ec2.SecurityGroupRule('load-ingress-rule-1', {
         type: "ingress",
-        fromPort: 443,
-        toPort: 443,
-        protocol: "tcp",
+        fromPort: httpsPort,
+        toPort: httpsPort,
+        protocol: protocol,
         securityGroupId: loadBalancerSecurityGroup.id,
         cidrBlocks: [destinationCidr],
     },{dependsOn: [loadBalancerSecurityGroup]});
 
     const IngressRule0 = new aws.ec2.SecurityGroupRule('ingress-rule-0', {
         type: "ingress",
-        fromPort: 22,
-        toPort: 22,
-        protocol: "tcp",
+        fromPort: sshPort,
+        toPort: sshPort,
+        protocol: protocol,
         cidrBlocks: [destinationCidr],
         securityGroupId: applicationSecurityGroup.id,
     },{dependsOn:[applicationSecurityGroup]});
 
     const IngressRule1 = new aws.ec2.SecurityGroupRule('ingress-rule-1', {
         type: "ingress",
-        fromPort: 8080,
-        toPort: 8080,
-        protocol: "tcp",
+        fromPort: applnPort,
+        toPort: applnPort,
+        protocol: protocol,
         sourceSecurityGroupId: loadBalancerSecurityGroup.id,
         securityGroupId: applicationSecurityGroup.id,
     },{dependsOn: [applicationSecurityGroup, loadBalancerSecurityGroup]});
 
     new aws.ec2.SecurityGroupRule("ec2-outbound-rule-rds", {
         type: "egress",
-        fromPort: 0,       // Allow outgoing connections from any port
-        toPort: 0,     // To any port
-        protocol: "-1",
+        fromPort: allport,       // Allow outgoing connections from any port
+        toPort: allport,     // To any port
+        protocol: allprotocol,
         securityGroupId: applicationSecurityGroup.id,
         cidrBlocks: [destinationCidr] // Allow outgoing connections to the RDS endpoint
     },{dependsOn: [ applicationSecurityGroup] });
 
     new aws.ec2.SecurityGroupRule("ec2-outbound-rule-loadbalancer", {
         type: "egress",
-        fromPort: 0,       // Allow outgoing connections from any port
-        toPort: 0,     // To any port
-        protocol: "-1",
+        fromPort: allport,       // Allow outgoing connections from any port
+        toPort: allport,     // To any port
+        protocol: allprotocol,
         securityGroupId: loadBalancerSecurityGroup.id,
         cidrBlocks: [destinationCidr] // Allow outgoing connections to the RDS endpoint
     },{dependsOn: [ loadBalancerSecurityGroup] });
@@ -266,8 +282,8 @@ async function main() {
 
     //create http target group to application port
     const httpTargetGroup = new aws.lb.TargetGroup("httpTargetGroup", {
-        port: 8080,
-        protocol:'HTTP',
+        port: applnPort,
+        protocol: http_protocol,
         targetType: "instance",
         vpcId: vpc.id,
         healthCheck: {
@@ -276,9 +292,9 @@ async function main() {
             healthyThreshold: 3,   // The number of consecutive passes for it to be declared as healthy
             interval: 30,          // Duration in seconds in between individual health checks
             timeout: 5,            // The duration after which the check times out, in seconds
-            path: "/healthz", 
-            port: 8080,             // The destination for the health check request
-            protocol:'HTTP',        // Set the same protocol as the target group
+            path: api_testing, 
+            port: applnPort,             // The destination for the health check request
+            protocol:http_protocol,        // Set the same protocol as the target group
         },
     })
     
@@ -286,7 +302,7 @@ async function main() {
     // Setting up the listener for the HTTP target group.
     const httpListener = new aws.lb.Listener("httpListener", {
         loadBalancerArn: loadBalancer.arn,
-        port: 80,
+        port: httpPort,
         defaultActions: [{
             type: "forward",
             targetGroupArn: httpTargetGroup.arn
@@ -309,7 +325,7 @@ async function main() {
             securityGroups: [applicationSecurityGroup.id]
         }],
         blockDeviceMappings: [{
-            deviceName: "/dev/xvda",
+            deviceName: device_path,
             ebs: {
                 volumeSize: volumeSize,
                 volumeType: volumeType,
@@ -349,21 +365,21 @@ async function main() {
     const asgStepPolicyUp = new aws.autoscaling.Policy("asgStepPolicyUp", {
         scalingAdjustment: 1,
         adjustmentType: "ChangeInCapacity",
-        cooldown: 300,
+        cooldown: cooldown_time,
         // estimatedInstanceWarmup: 300,
         autoscalingGroupName: autoScalingGroup.name,
         // metricAggregationType: "sum",
-        policyType: "SimpleScaling",
+        policyType: policyType_val,
     })
     
     const asgStepPolicyDown = new aws.autoscaling.Policy("asgStepPolicyDown", {
         scalingAdjustment: -1,
         adjustmentType: "ChangeInCapacity",
-        cooldown: 300,
+        cooldown: cooldown_time,
         // estimatedInstanceWarmup: 300,
         autoscalingGroupName: autoScalingGroup.name,
         // metricAggregationType: "Sum",
-        policyType: "SimpleScaling",
+        policyType: policyType_val,
     })
 
     // #region CloudWatch Alarms
@@ -372,11 +388,11 @@ async function main() {
         alarmName: "ScaleUpAlarm",
         comparisonOperator: "GreaterThanThreshold",
         evaluationPeriods: 1,
-        threshold: 5,
+        threshold: threshold,
         metricName: "CPUUtilization",
         namespace: "AWS/EC2",
         period: 60,
-        statistic: "Average",
+        statistic: statistic,
         dimensions: {
             AutoScalingGroupName: autoScalingGroup.name,
         },
@@ -387,11 +403,11 @@ async function main() {
         alarmName: "ScaleDownAlarm",
         comparisonOperator: "LessThanThreshold",
         evaluationPeriods: 1,
-        threshold: 5,
+        threshold: threshold,
         metricName: "CPUUtilization",
         namespace: "AWS/EC2",
         period: 60,
-        statistic: "Average",
+        statistic: statistic,
         dimensions: {
             AutoScalingGroupName: autoScalingGroup.name,
         },

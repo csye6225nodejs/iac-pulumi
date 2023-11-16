@@ -4,7 +4,7 @@ config:
   iac-pulumi:destinationCidr: 0.0.0.0/0
   iac-pulumi:subnetCidr: "10.0.0.0/16"
   iac-pulumi:vpcCidrBlock: 10.0.0.0/16
-  iac-pulumi:ami_id: ami-01ef5660631392901
+  iac-pulumi:ami_id: ami-000d74131b568cf7d
   iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/democloudkey/democloudkey.pub"
   iac-pulumi:ports: [22, 8080]
   iac-pulumi:loadingports: [80, 443]
@@ -30,3 +30,17 @@ config:
   iac-pulumi:domainname: "demo.abhishekvenkata.me"
   iac-pulumi:loggroupname: "csye6225"
   iac-pulumi:logstreamname: "webapp"
+
+  iac-pulumi:httpPort: 80
+  iac-pulumi:httpsPort: 443
+  iac-pulumi:sshPort: 22
+  iac-pulumi:applnPort: 8080
+  iac-pulumi:allport: 0
+  iac-pulumi:allprotocol: -1
+  iac-pulumi:api_testing: "/healthz"
+  iac-pulumi:device_path: "/dev/xvda"
+  iac-pulumi:http_protocol: 'HTTP'
+  iac-pulumi:statistic: "Sum"
+  iac-pulumi:threshold: 5
+  iac-pulumi:policyType_val: "SimpleScaling"
+  iac-pulumi:cooldown_time: 60
