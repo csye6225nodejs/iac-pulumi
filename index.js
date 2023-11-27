@@ -33,7 +33,7 @@ const hostedZone = new pulumi.Config("iac-pulumi").require("ZoneId");
 const domainname = new pulumi.Config("iac-pulumi").require("domainname");
 const loggroupname = new pulumi.Config("iac-pulumi").require("loggroupname");
 const logstreamname = new pulumi.Config("iac-pulumi").require("logstreamname");
-
+const snsTopic = new pulumi.Config("iac-pulumi").require("snsTopic");
 
 const httpPort = new pulumi.Config("iac-pulumi").require("httpPort");
 const httpsPort = new pulumi.Config("iac-pulumi").require("httpsPort");
@@ -452,6 +452,11 @@ async function main() {
         ],
     }, { 
         dependsOn: [loadBalancer, autoScalingGroup] 
+    });
+
+    //creating an SNS Topic
+    const sns = new aws.sns.Topic(snsTopic, {
+        displayName: snsTopic,
     });
 
     const publicRouteTable = createPublicRouteTable(vpc, publicSubnets, internetGateway);
