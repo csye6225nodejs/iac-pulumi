@@ -1,5 +1,7 @@
 const pulumi = require("@pulumi/pulumi");
 const aws = require("@pulumi/aws");
+const gcp = requir("@pulumi/gcp");
+
 const fs = require("fs");
 const SubnetCIDRAdviser = require("subnet-cidr-calculator");
 const ami_id = new pulumi.Config("iac-pulumi").require("ami_id");
