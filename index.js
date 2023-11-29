@@ -210,15 +210,83 @@ async function main() {
         vpcSecurityGroupIds: [dbSecurityGroup.id],
         parameterGroupName: dbparametergroup.name,
     },{dependsOn: dbsubnetgroup});
+
+    const serviceAccount = new gcp.serviceaccount.Account("my-service-account", {
+        accountId: "my-service-account",
+        displayName: "My Service Account",
+        project: "dev-csye6225-fall2023",
+    });
+    const serviceAccountKey = new gcp.serviceaccount.Key("my-service-account-key", {
+        serviceAccountId: serviceAccount.name,
+    },{dependsOn: serviceAccount});
+
+    const storageAdminRoleBinding = new gcp.projects.IAMMember("grant-storage-admin-role", {
+        member: serviceAccount.email.apply(email => `serviceAccount:${email}`),
+        role: "roles/storage.admin",
+        project: "dev-csye6225-fall2023",
+    }, { dependsOn: serviceAccount });
+
+    const lambdaRole = new aws.iam.Role("lambdaRole", {
+        assumeRolePolicy: JSON.stringify({
+            Version: "2012-10-17",
+            Statement: [{
+                Action: "sts:AssumeRole",
+                Principal: {
+                    Service: "lambda.amazonaws.com",
+                },
+                Effect: "Allow",
+                Sid: "",
+            }],
+        }),
+    });
+
+    new aws.iam.RolePolicyAttachment("lambdaFullAccess", {
+        role: lambdaRole.name,
+        policyArn: "arn:aws:iam::aws:policy/AWSLambda_FullAccess",
+    });
+
+    new aws.iam.RolePolicyAttachment("lambdaBasicExecutionRole", {
+        role: lambdaRole.name,
+        policyArn: "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+    }, { dependsOn: lambdaRole });
+
+    const lambda = new aws.lambda.Function("mylambda", {
+        code: new pulumi.asset.AssetArchive({
+            ".": new pulumi.asset.FileArchive("./../serverless.zip"), // replace with your directory
+        }),
+        role: lambdaRole.arn,
+        runtime: "nodejs20.x",
+        handler: 'index.handler',  // replace with your handler
+        environment: {
+            variables: {
+                "GOOGLE_CREDENTIALS": serviceAccountKey.privateKey,
+            }
+        }
+    }, { dependsOn: serviceAccountKey });
+
+    const topic = new aws.sns.Topic("myUserTopic");
+
+    const permission = new aws.lambda.Permission("my-permission", {
+        action: "lambda:InvokeFunction",
+        function: lambda,
+        principal: "sns.amazonaws.com",
+        sourceArn: topic.arn,
+    },{dependsOn: lambda});
+
+    // Create a subscription to the just created SNSTopic
+    const subscription = topic.onEvent("my-subscription", lambda);
+
+
     
        // #region User Data Script
-       const userDataScript = pulumi.all([rdsinstance.dbName, rdsinstance.username, rdsinstance.password,rdsinstance.address]).apply(([dbname, dbusername, dbpassword, dbhost]) => {
+       const userDataScript = pulumi.all([rdsinstance.dbName, rdsinstance.username, rdsinstance.password,rdsinstance.address,sns.arn]).apply(([dbname, dbusername, dbpassword, dbhost,sns]) => {
         return `#!/bin/bash
         sudo chown csye6625user:csye6225group -R /opt/webapp
         echo "DB_NAME=${dbname}" >> /opt/webapp/.env
         echo "DB_USER=${dbusername}" >> /opt/webapp/.env
         echo "DB_PASSWORD=${dbpassword}" >> /opt/webapp/.env
         echo "DB_HOST=${dbhost}" >> /opt/webapp/.env
+        echo "SNS=${sns}" >> /opt/webapp/.env 
         sudo cd /opt/webapp
         sudo mkdir logs
         sudo cd logs
@@ -258,10 +326,16 @@ async function main() {
         policyArn: "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"   // CloudWatchAgentServerPolicy ARN
     }, {dependsOn: [role]});
 
+    const AmazonSNSFullAccess = new aws.iam.RolePolicyAttachment("SNSPolicyAttachment",{
+        role: role.name,
+        policyArn: "arn:aws:iam::aws:policy/AmazonSNSFullAccess"
+    },{dependsOn:[role]});
+
+
     // Creating an IAM Instance Profile which will be later be attached to the EC2 instance
     const instanceProfile = new aws.iam.InstanceProfile("instanceProfile", {
         role: role.name
-    },{dependsOn: [role]});
+    },{dependsOn: [role, cloudWatchFullAccess, AmazonSNSFullAccess]});
 
     const logGroup = new aws.cloudwatch.LogGroup("csye6225LogGroup", {
         name: loggroupname,
@@ -339,7 +413,7 @@ async function main() {
             }
         }],
         userData: encodedUserData,
-    }, {dependsOn: [rdsinstance, applicationSecurityGroup, instanceProfile]});
+    }, {dependsOn: [rdsinstance, applicationSecurityGroup, instanceProfile, sns]});
 
     // Define an auto-scaling group which constrains its instances with the launch configuration
     const autoScalingGroup = new aws.autoscaling.Group("web-autoscaling-group", {
@@ -454,10 +528,6 @@ async function main() {
         dependsOn: [loadBalancer, autoScalingGroup] 
     });
 
-    //creating an SNS Topic
-    const sns = new aws.sns.Topic(snsTopic, {
-        displayName: snsTopic,
-    });
 
     const publicRouteTable = createPublicRouteTable(vpc, publicSubnets, internetGateway);
     const privateRouteTable = createPrivateRouteTable(vpc, privateSubnets);
