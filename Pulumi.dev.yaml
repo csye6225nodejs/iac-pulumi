@@ -1,5 +1,6 @@
 config:
   aws:profile: dev
+  gcp:project: dev-fall2023
   aws:region: us-east-2
   iac-pulumi:destinationCidr: 0.0.0.0/0
   iac-pulumi:subnetCidr: "10.0.0.0/16"
