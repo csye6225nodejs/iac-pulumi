@@ -40,7 +40,7 @@ config:
   iac-pulumi:protocol: "tcp"
   iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/cloudkey/keypairgen.pub"
   iac-pulumi:region: us-east-2
-  iac-pulumi:sender_email: "abhishekvenkata.199715@gmail.com"
+  iac-pulumi:sender_email: "Venkata Abhishek Tiruchunapalli <abhishekvenkata.199707@gmail.com>"
   iac-pulumi:skipFinalSnapshot: "true"
   iac-pulumi:snsTopic: "fall2023"
   iac-pulumi:sqlport: "3306"
