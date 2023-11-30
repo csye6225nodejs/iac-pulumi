@@ -1,48 +1,57 @@
 config:
   aws:profile: dev
-  gcp:project: dev-fall2023
   aws:region: us-east-2
-  iac-pulumi:destinationCidr: 0.0.0.0/0
-  iac-pulumi:subnetCidr: "10.0.0.0/16"
-  iac-pulumi:vpcCidrBlock: 10.0.0.0/16
-  iac-pulumi:ami_id: ami-0c2ed95f28b75740b
-  iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/cloudkey/keypairgen.pub"
-  iac-pulumi:ports: [22, 8080]
-  iac-pulumi:loadingports: [80, 443]
-  iac-pulumi:volumeSize: 25
-  iac-pulumi:volumeType: "gp2"  
-  iac-pulumi:mysqlfamily: "mysql8.0"
-  iac-pulumi:allocatedStorage: 20
-  iac-pulumi:storageType: "gp3"
-  iac-pulumi:instanceClass: "db.t2.micro"
-  iac-pulumi:db_name: "csye6225"
-  iac-pulumi:username: "csye6225"
-  iac-pulumi:password: "Abhi3534"
-  iac-pulumi:skipFinalSnapshot: true
-  iac-pulumi:instanceType: "t2.micro"
-  iac-pulumi:sqlport: 3306
-  iac-pulumi:protocol: "tcp"  
-  iac-pulumi:engine: "mysql"
-  iac-pulumi:parameter_name: "max_connections"
-  iac-pulumi:max_conn: 100
-  iac-pulumi:fromPort: 0
-  iac-pulumi:toPort: 65535
+  gcp:project: dev-fall2023
   iac-pulumi:ZoneId: "Z031431132X536RK4X5WN"
+  iac-pulumi:allocatedStorage: "20"
+  iac-pulumi:allport: "0"
+  iac-pulumi:allprotocol: "-1"
+  iac-pulumi:ami_id: ami-0b6949f7a70945713
+  iac-pulumi:api_testing: "/healthz"
+  iac-pulumi:applnPort: "8080"
+  iac-pulumi:bucket_name: "csye6225-fall2023"
+  iac-pulumi:cooldown_time: "60"
+  iac-pulumi:db_name: "csye6225"
+  iac-pulumi:destinationCidr: 0.0.0.0/0
+  iac-pulumi:device_path: "/dev/xvda"
   iac-pulumi:domainname: "dev.abhishekvenkata.me"
+  iac-pulumi:engine: "mysql"
+  iac-pulumi:fromPort: "0"
+  iac-pulumi:gcp_project: dev-fall2023
+  iac-pulumi:http_protocol: 'HTTP'
+  iac-pulumi:httpPort: "80"
+  iac-pulumi:httpsPort: "443"
+  iac-pulumi:instanceClass: "db.t2.micro"
+  iac-pulumi:instanceType: "t2.micro"
+  iac-pulumi:loadingports: [80, 443]
   iac-pulumi:loggroupname: "csye6225"
   iac-pulumi:logstreamname: "webapp"
-
-  iac-pulumi:httpPort: 80
-  iac-pulumi:httpsPort: 443
-  iac-pulumi:sshPort: 22
-  iac-pulumi:applnPort: 8080
-  iac-pulumi:allport: 0
-  iac-pulumi:allprotocol: -1
-  iac-pulumi:api_testing: "/healthz"
-  iac-pulumi:device_path: "/dev/xvda"
-  iac-pulumi:http_protocol: 'HTTP'
-  iac-pulumi:statistic: "Sum"
-  iac-pulumi:threshold: 5
+  iac-pulumi:mailgun-api-key2: "57db53f64916929bbc2696fc95ba4b10-30b58138-8177f2ee"
+  iac-pulumi:mailgun_api_key: "b47cf213c81e2ee1d4779f6c45bdfe51-30b58138-9e72675b"
+  iac-pulumi:mailgun_api_key2: 57db53f64916929bbc2696fc95ba4b10-30b58138-8177f2ee
+  iac-pulumi:mailgun_domain: "abhishekvenkata.me"
+  iac-pulumi:mailgun_domain2: "demo.abhishekvenkata.me"
+  iac-pulumi:max_conn: "100"
+  iac-pulumi:mysqlfamily: "mysql8.0"
+  iac-pulumi:parameter_name: "max_connections"
+  iac-pulumi:password: "Abhi3534"
   iac-pulumi:policyType_val: "SimpleScaling"
-  iac-pulumi:cooldown_time: 60
+  iac-pulumi:ports: [22, 8080]
+  iac-pulumi:protocol: "tcp"
+  iac-pulumi:pubkey: "/Users/abhishekvenkata/.ssh/cloudkey/keypairgen.pub"
+  iac-pulumi:region: us-east-2
+  iac-pulumi:sender_email: "abhishekvenkata.199715@gmail.com"
+  iac-pulumi:skipFinalSnapshot: "true"
   iac-pulumi:snsTopic: "fall2023"
+  iac-pulumi:sqlport: "3306"
+  iac-pulumi:sshPort: "22"
+  iac-pulumi:statistic: "Sum"
+  iac-pulumi:storageType: "gp3"
+  iac-pulumi:subnetCidr: "10.0.0.0/16"
+  iac-pulumi:threshold: "5"
+  iac-pulumi:toPort: "65535"
+  iac-pulumi:username: "csye6225"
+  iac-pulumi:volumeSize: "25"
+  iac-pulumi:volumeType: "gp2"
+  iac-pulumi:vpcCidrBlock: 10.0.0.0/16
+  iac-pulumi:topic_subscription: "topic_subscription"
