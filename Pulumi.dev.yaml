@@ -6,7 +6,7 @@ config:
   iac-pulumi:allocatedStorage: "20"
   iac-pulumi:allport: "0"
   iac-pulumi:allprotocol: "-1"
-  iac-pulumi:ami_id: ami-0b6949f7a70945713
+  iac-pulumi:ami_id: ami-0455ba674a60d6180
   iac-pulumi:api_testing: "/healthz"
   iac-pulumi:applnPort: "8080"
   iac-pulumi:bucket_name: "csye6225-fall2023"
@@ -55,3 +55,4 @@ config:
   iac-pulumi:volumeType: "gp2"
   iac-pulumi:vpcCidrBlock: 10.0.0.0/16
   iac-pulumi:topic_subscription: "topic_subscription"
+  iac-pulumi:sslARN: "arn:aws:acm:us-east-2:908593341105:certificate/45a7123e-806b-48ec-a77f-366f90972e9c"
