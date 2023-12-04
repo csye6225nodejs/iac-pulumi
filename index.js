@@ -60,6 +60,7 @@ const bucket_name = new pulumi.Config("iac-pulumi").require("bucket_name");
 const sender_email = new pulumi.Config("iac-pulumi").require("sender_email");
 const gcp_project  = new pulumi.Config("iac-pulumi").require("gcp_project");
 const topic_subscription = new pulumi.Config("iac-pulumi").require("topic_subscription");
+const sslARN = new pulumi.Config("iac-pulumi").require("sslARN");
 
 async function main() {
 
@@ -453,13 +454,15 @@ async function main() {
     // Setting up the listener for the HTTP target group.
     const httpListener = new aws.lb.Listener("httpListener", {
         loadBalancerArn: loadBalancer.arn,
-        port: httpPort,
+        port: httpsPort,
+        protocol: "HTTPS",
         defaultActions: [{
             type: "forward",
             targetGroupArn: httpTargetGroup.arn
         }],
+        sslPolicy: "ELBSecurityPolicy-2016-08",
+        certificateArn: sslARN
     });
-
 
     //user data script base64 conversion
     //const userData = Buffer.from(userDataScript).toString('base64');
